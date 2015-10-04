@@ -22,7 +22,7 @@
 #include <com/sun/star/beans/XPropertySetInfo.hpp>
 #include <com/sun/star/beans/PropertyState.hpp>
 #include <com/sun/star/lang/IllegalArgumentException.hpp>
-#include <cppuhelper/implbase1.hxx>
+#include <cppuhelper/implbase.hxx>
 #include <svl/itemset.hxx>
 #include <svl/svldllapi.h>
 #include <vector>
@@ -154,7 +154,7 @@ public:
 };
 
 struct SfxItemPropertySetInfo_Impl;
-class SVL_DLLPUBLIC SfxItemPropertySetInfo : public cppu::WeakImplHelper1<css::beans::XPropertySetInfo>
+class SVL_DLLPUBLIC SfxItemPropertySetInfo : public cppu::WeakImplHelper< css::beans::XPropertySetInfo >
 {
     SfxItemPropertySetInfo_Impl* m_pImpl;
 
@@ -178,7 +178,7 @@ public:
 
 };
 
-class SVL_DLLPUBLIC SfxExtItemPropertySetInfo: public cppu::WeakImplHelper1<css::beans::XPropertySetInfo >
+class SVL_DLLPUBLIC SfxExtItemPropertySetInfo: public cppu::WeakImplHelper < css::beans::XPropertySetInfo >
 {
     SfxItemPropertyMap aExtMap;
 public:
