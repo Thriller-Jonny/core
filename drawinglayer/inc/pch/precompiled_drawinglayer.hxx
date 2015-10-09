@@ -83,7 +83,7 @@
 #include <comphelper/unique_disposing_ptr.hxx>
 #include <comphelper/string.hxx>
 #include <cppuhelper/factory.hxx>
-#include <cppuhelper/implbase2.hxx>
+#include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <cstdio>
 #include <i18nlangtag/languagetag.hxx>

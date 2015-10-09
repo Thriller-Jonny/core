@@ -272,9 +272,9 @@
 #include <config_features.h>
 #include <config_folders.h>
 #include <config_vclplug.h>
-#include <cppuhelper/compbase4.hxx>
+#include <cppuhelper/compbase.hxx>
 #include <cppuhelper/exc_hlp.hxx>
-#include <cppuhelper/implbase1.hxx>
+#include <cppuhelper/implbase.hxx>
 #include <cppuhelper/implementationentry.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <cstddef>

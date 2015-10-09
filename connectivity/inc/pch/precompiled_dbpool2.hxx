@@ -35,7 +35,7 @@
 #include <comphelper/sequence.hxx>
 #include <comphelper/types.hxx>
 #include <comphelper/uno3.hxx>
-#include <cppuhelper/compbase1.hxx>
+#include <cppuhelper/compbase.hxx>
 #include <cppuhelper/component.hxx>
 #include <cppuhelper/factory.hxx>
 #include <cppuhelper/supportsservice.hxx>

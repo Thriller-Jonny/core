@@ -56,8 +56,7 @@
 #include <config_features.h>
 #include <config_folders.h>
 #include <cppuhelper/exc_hlp.hxx>
-#include <cppuhelper/implbase1.hxx>
-#include <cppuhelper/implbase2.hxx>
+#include <cppuhelper/implbase.hxx>
 #include <cppuhelper/weak.hxx>
 #include <i18nlangtag/languagetag.hxx>
 #include <osl/diagnose.h>

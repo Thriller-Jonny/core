@@ -103,7 +103,6 @@
 #include <comphelper/string.hxx>
 #include <config_folders.h>
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/implbase1.hxx>
 #include <ctype.h>
 #include <editeng/acorrcfg.hxx>
 #include <editeng/adjustitem.hxx>

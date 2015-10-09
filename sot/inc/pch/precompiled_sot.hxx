@@ -61,7 +61,7 @@
 #include <comphelper/storagehelper.hxx>
 #include <cppuhelper/exc_hlp.hxx>
 #include <cppuhelper/factory.hxx>
-#include <cppuhelper/implbase2.hxx>
+#include <cppuhelper/implbase.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <osl/diagnose.h>
 #include <osl/endian.h>

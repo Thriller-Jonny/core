@@ -57,7 +57,7 @@
 #include <comphelper/storagehelper.hxx>
 #include <comphelper/types.hxx>
 #include <cppuhelper/exc_hlp.hxx>
-#include <cppuhelper/implbase1.hxx>
+#include <cppuhelper/implbase.hxx>
 #include <iterator>
 #include <list>
 #include <map>

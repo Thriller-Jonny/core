@@ -31,7 +31,7 @@
 #include <com/sun/star/xml/sax/Parser.hpp>
 #include <com/sun/star/xml/sax/XParser.hpp>
 #include <cppuhelper/factory.hxx>
-#include <cppuhelper/implbase2.hxx>
+#include <cppuhelper/implbase.hxx>
 #include <cppuhelper/implementationentry.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <drawinglayer/attribute/fontattribute.hxx>

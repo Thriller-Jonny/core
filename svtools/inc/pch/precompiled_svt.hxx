@@ -251,8 +251,6 @@
 #include <cppuhelper/compbase.hxx>
 #include <cppuhelper/factory.hxx>
 #include <cppuhelper/implbase.hxx>
-#include <cppuhelper/implbase1.hxx>
-#include <cppuhelper/implbase2.hxx>
 #include <cppuhelper/implementationentry.hxx>
 #include <cppuhelper/interfacecontainer.h>
 #include <cppuhelper/queryinterface.hxx>

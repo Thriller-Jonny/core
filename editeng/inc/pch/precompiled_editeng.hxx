@@ -193,8 +193,6 @@
 #include <comphelper/storagehelper.hxx>
 #include <comphelper/string.hxx>
 #include <comphelper/types.hxx>
-#include <cppuhelper/implbase1.hxx>
-#include <cppuhelper/implbase4.hxx>
 #include <cppuhelper/queryinterface.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <cppuhelper/typeprovider.hxx>
