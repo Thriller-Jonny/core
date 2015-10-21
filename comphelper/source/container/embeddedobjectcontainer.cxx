@@ -467,6 +467,8 @@ bool EmbeddedObjectContainer::StoreEmbeddedObject(
     const uno::Reference < embed::XEmbeddedObject >& xObj, OUString& rName, bool bCopy,
     const OUString& rSrcShellID, const OUString& rDestShellID )
 {
+    SAL_INFO( "comphelper.container", "entering >>EmbeddedObjectContainer::StoreEmbeddedObject<<" );
+
     uno::Reference < embed::XEmbedPersist > xPersist( xObj, uno::UNO_QUERY );
     if ( rName.isEmpty() )
         rName = CreateUniqueObjectName();
@@ -500,9 +502,9 @@ bool EmbeddedObjectContainer::StoreEmbeddedObject(
             }
         }
     }
-    catch (uno::Exception const& e)
+    catch ( uno::Exception const& ex )
     {
-        SAL_WARN("comphelper.container", "EmbeddedObjectContainer::StoreEmbeddedObject: exception caught: " << e.Message);
+        SAL_WARN( "comphelper.container", "EmbeddedObjectContainer::StoreEmbeddedObject: exception caught: " << ex.Message );
         // TODO/LATER: better error recovery should keep storage intact
         return false;
     }
@@ -512,6 +514,8 @@ bool EmbeddedObjectContainer::StoreEmbeddedObject(
 
 bool EmbeddedObjectContainer::InsertEmbeddedObject( const uno::Reference < embed::XEmbeddedObject >& xObj, OUString& rName )
 {
+    SAL_INFO( "comphelper.container", "entering >>bool EmbeddedObjectContainer::InsertEmbeddedObject( const uno::Reference < embed::XEmbeddedObject >& xObj, OUString& rName )<<" );
+
     // store it into the container storage
     if (StoreEmbeddedObject(xObj, rName, false, OUString(), OUString()))
     {
@@ -519,12 +523,14 @@ bool EmbeddedObjectContainer::InsertEmbeddedObject( const uno::Reference < embed
         AddEmbeddedObject( xObj, rName );
         return true;
     }
-    else
-        return false;
+
+    return false;
 }
 
 uno::Reference < embed::XEmbeddedObject > EmbeddedObjectContainer::InsertEmbeddedObject( const uno::Reference < io::XInputStream >& xStm, OUString& rNewName )
 {
+    SAL_INFO( "comphelper.container", "entering >>uno::Reference < embed::XEmbeddedObject > EmbeddedObjectContainer::InsertEmbeddedObject( const uno::Reference < io::XInputStream >& xStm, OUString& rNewName )<<" );
+
     if ( rNewName.isEmpty() )
         rNewName = CreateUniqueObjectName();
 
@@ -585,6 +591,8 @@ uno::Reference < embed::XEmbeddedObject > EmbeddedObjectContainer::InsertEmbedde
 
 uno::Reference < embed::XEmbeddedObject > EmbeddedObjectContainer::InsertEmbeddedObject( const css::uno::Sequence < css::beans::PropertyValue >& aMedium, OUString& rNewName )
 {
+    SAL_INFO( "comphelper.container", "entering >>uno::Reference < embed::XEmbeddedObject > EmbeddedObjectContainer::InsertEmbeddedObject( const css::uno::Sequence < css::beans::PropertyValue >& aMedium, OUString& rNewName )<<" );
+
     if ( rNewName.isEmpty() )
         rNewName = CreateUniqueObjectName();
 
