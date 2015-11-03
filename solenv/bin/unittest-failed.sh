@@ -22,17 +22,19 @@ DEBUGGING=
 if [ "$3" = "WNT" ]; then
     DEBUGGING='
 export CPPUNITTRACE="'$DEVENV' /debugexe" # for interactive debugging in Visual Studio
-export CPPUNITTRACE="drmemory -free_max_frames 20"            # for memory checking (install Dr.Memory first, and put it to your PATH)
+export CPPUNITTRACE="drmemory -free_max_frames 20" # for memory checking (install Dr.Memory first, and put it to your PATH)
 '
 elif [ "$3" = "MACOSX" ]; then
     DEBUGGING='
-export CPPUNITTRACE="lldb --"       # for interactive debugging on OS X
+export CPPUNITTRACE="gdb --args"    # for interactive debugging with gdb
+export CPPUNITTRACE="lldb --"       # for interactive debugging with lldb
 export VALGRIND=memcheck            # for memory checking
 '
 else
     DEBUGGING='
 export DEBUGCPPUNIT=TRUE            # for exception catching
-export CPPUNITTRACE="gdb --args"    # for interactive debugging on Linux
+export CPPUNITTRACE="gdb --args"    # for interactive debugging with gdb
+export CPPUNITTRACE="lldb --"       # for interactive debugging with lldb
 export VALGRIND=memcheck            # for memory checking
 '
 fi
