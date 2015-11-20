@@ -22,8 +22,6 @@
 #include "datasource.hxx"
 #include "databasedocument.hxx"
 #include "dbastrings.hrc"
-#include "module_dba.hxx"
-#include "services.hxx"
 #include "documenteventexecutor.hxx"
 #include "databasecontext.hxx"
 #include "documentcontainer.hxx"
@@ -111,7 +109,7 @@ using namespace ::com::sun::star::script;
 using namespace ::com::sun::star::script::provider;
 using namespace ::com::sun::star::ui;
 using namespace ::cppu;
-using namespace ::osl;
+using namespace ::dbaccess;
 
 using ::com::sun::star::awt::XWindow;
 using ::com::sun::star::ucb::XContent;
@@ -149,11 +147,18 @@ bool ViewMonitor::onSetCurrentController( const Reference< XController >& _rxCon
 
 } // namespace dbaccess
 
-// ODatabaseDocument
-
-extern "C" void SAL_CALL createRegistryInfo_ODatabaseDocument()
+extern "C" SAL_DLLPUBLIC_EXPORT css::uno::XInterface* SAL_CALL
+com_sun_star_comp_dba_ODatabaseDocument(css::uno::XComponentContext* context,
+        css::uno::Sequence<css::uno::Any> const &)
 {
-    static ::dba::OAutoRegistration< ::dbaccess::ODatabaseDocument > aAutoRegistration;
+    Reference< XUnoTunnel > xDBContextTunnel( DatabaseContext::create(context), UNO_QUERY_THROW );
+    ODatabaseContext* pContext = reinterpret_cast< ODatabaseContext* >(
+        xDBContextTunnel->getSomething( ODatabaseContext::getUnoTunnelImplementationId() ));
+
+    rtl::Reference<ODatabaseModelImpl> pImpl( new ODatabaseModelImpl(context, *pContext) );
+    Reference<css::uno::XInterface> xModel( pImpl->createNewModel_deliverOwnership(false) );
+
+    return cppu::acquire(static_cast<OWeakObject *>(xModel.get()));
 }
 
 namespace dbaccess
@@ -1900,36 +1905,17 @@ void SAL_CALL ODatabaseDocument::removeEventListener( const Reference< lang::XEv
 }
 
 // XServiceInfo
-OUString ODatabaseDocument::getImplementationName(  ) throw(RuntimeException, std::exception)
-{
-    return getImplementationName_static();
-}
-
-OUString ODatabaseDocument::getImplementationName_static(  ) throw(RuntimeException)
+OUString ODatabaseDocument::getImplementationName() throw(RuntimeException, std::exception)
 {
     return OUString("com.sun.star.comp.dba.ODatabaseDocument");
 }
 
-Sequence< OUString > ODatabaseDocument::getSupportedServiceNames(  ) throw (RuntimeException, std::exception)
+Sequence< OUString > ODatabaseDocument::getSupportedServiceNames() throw (RuntimeException, std::exception)
 {
-    return getSupportedServiceNames_static();
-}
-
-Reference< XInterface > ODatabaseDocument::Create( const Reference< XComponentContext >& _rxContext )
-{
-    Reference< XUnoTunnel > xDBContextTunnel( DatabaseContext::create(_rxContext), UNO_QUERY_THROW );
-    ODatabaseContext* pContext = reinterpret_cast< ODatabaseContext* >( xDBContextTunnel->getSomething( ODatabaseContext::getUnoTunnelImplementationId() ) );
-
-    ::rtl::Reference<ODatabaseModelImpl> pImpl( new ODatabaseModelImpl( _rxContext, *pContext ) );
-    Reference< XModel > xModel( pImpl->createNewModel_deliverOwnership( false ) );
-    return xModel.get();
-}
-
-Sequence< OUString > ODatabaseDocument::getSupportedServiceNames_static(  ) throw (RuntimeException)
-{
-    Sequence< OUString > aSNS( 2 );
-    aSNS[0] = "com.sun.star.sdb.OfficeDatabaseDocument";
-    aSNS[1] = "com.sun.star.document.OfficeDocument";
+    Sequence< OUString > aSNS {
+        "com.sun.star.sdb.OfficeDatabaseDocument",
+        "com.sun.star.document.OfficeDocument"
+    };
     return aSNS;
 }
 
