@@ -50,10 +50,10 @@
 #include <kservicetypetrader.h>
 #include <kmessagebox.h>
 
-#include <qclipboard.h>
-#include <QWidget>
-#include <QCheckBox>
-#include <QGridLayout>
+#include <QtGui/QClipboard>
+#include <QtGui/QWidget>
+#include <QtGui/QCheckBox>
+#include <QtGui/QGridLayout>
 
 #undef Region
 
@@ -83,7 +83,7 @@ using namespace ::com::sun::star::uno;
 
 // helper functions
 
-#include <QDebug>
+#include <QtCore/QDebug>
 
 namespace
 {

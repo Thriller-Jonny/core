@@ -17,48 +17,18 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <QtGui/QStyle>
-#include <kapplication.h>
+#pragma once
 
-#undef Region
-
-#include "KDEData.hxx"
-
-#include "KDEXLib.hxx"
-#include "KDESalDisplay.hxx"
-
-KDEData::~KDEData()
+inline OUString toOUString(const QString& s)
 {
+    // QString stores UTF16, just like OUString
+    return OUString(reinterpret_cast<const sal_Unicode*>(s.data()), s.length());
 }
 
-void KDEData::Init()
+inline QString toQString(const OUString& s)
 {
-    pXLib_ = new KDEXLib();
-    pXLib_->Init();
-    SetDisplay( SalKDEDisplay::self() );
-}
-
-void KDEData::initNWF()
-{
-    ImplSVData *pSVData = ImplGetSVData();
-
-    // draw toolbars on separate lines
-    pSVData->maNWFData.mbDockingAreaSeparateTB = true;
-    // no borders for menu, theming does that
-    pSVData->maNWFData.mbFlatMenu = true;
-
-    // Styled menus need additional space
-    QStyle *style = QApplication::style();
-    pSVData->maNWFData.mnMenuFormatBorderX =
-       style->pixelMetric( QStyle::PM_MenuPanelWidth ) +
-       style->pixelMetric( QStyle::PM_MenuHMargin );
-    pSVData->maNWFData.mnMenuFormatBorderY =
-       style->pixelMetric( QStyle::PM_MenuPanelWidth ) +
-       style->pixelMetric( QStyle::PM_MenuVMargin );
-}
-
-void KDEData::deInitNWF()
-{
+    return QString::fromUtf16(
+        reinterpret_cast<ushort const *>(s.getStr()), s.getLength());
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
